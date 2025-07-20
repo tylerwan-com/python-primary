@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import random
 import pygame
 import sys
@@ -12,7 +14,7 @@ CELL_SIZE = 20
 # 颜色定义
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-GREEN = (0, 255, 0)
+YELLOW = (255, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 
@@ -28,7 +30,15 @@ idiom = random.choice(IDIOMS)
 # 游戏窗口
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("贪吃蛇成语版")
-font = pygame.font.SysFont(None, 36)
+# 尝试加载支持中文的字体
+def get_zh_font(size):
+    for font_name in ["SimHei", "Microsoft YaHei", "msyh.ttc", "simsun.ttc", "Arial Unicode MS"]:
+        try:
+            return pygame.font.SysFont(font_name, size)
+        except:
+            continue
+    return pygame.font.SysFont(None, size)
+font = get_zh_font(36)
 
 # 蛇和食物
 snake = [(5, 5)]
@@ -39,7 +49,9 @@ score = 0
 
 def draw_snake(snake):
     for s in snake:
-        pygame.draw.rect(screen, GREEN, (s[0]*CELL_SIZE, s[1]*CELL_SIZE, CELL_SIZE, CELL_SIZE))
+        center = (s[0]*CELL_SIZE + CELL_SIZE//2, s[1]*CELL_SIZE + CELL_SIZE//2)
+        radius = CELL_SIZE//2
+        pygame.draw.circle(screen, YELLOW, center, radius)
 
 def draw_food(food, char):
     pygame.draw.rect(screen, RED, (food[0]*CELL_SIZE, food[1]*CELL_SIZE, CELL_SIZE, CELL_SIZE))
@@ -76,26 +88,38 @@ def main():
                 elif event.key == pygame.K_RIGHT and direction != (-1, 0):
                     direction = (1, 0)
 
-        new_head = (snake[0][0] + direction[0], snake[0][1] + direction[1])
-        if new_head == food:
-            snake.insert(0, new_head)
-            idiom_index += 1
-            score += 1
-            if idiom_index >= len(idiom):
-                idiom_index = 0
-                # 新成语
-                idiom = random.choice(IDIOMS)
-            # 新食物
-            while True:
-                food = (random.randint(0, (WIDTH // CELL_SIZE) - 1), random.randint(0, (HEIGHT // CELL_SIZE) - 1))
-                if food not in snake:
-                    break
-        else:
-            snake.insert(0, new_head)
-            snake.pop()
 
-        if check_collision(snake):
-            running = False
+        # 判断是否撞墙
+        next_x = snake[0][0] + direction[0]
+        next_y = snake[0][1] + direction[1]
+        hit_wall = (
+            next_x < 0 or next_x >= WIDTH // CELL_SIZE or
+            next_y < 0 or next_y >= HEIGHT // CELL_SIZE
+        )
+        if hit_wall:
+            # 撞墙时不移动
+            pass
+        else:
+            new_head = (next_x, next_y)
+            if new_head == food:
+                snake.insert(0, new_head)
+                idiom_index += 1
+                score += 1
+                if idiom_index >= len(idiom):
+                    idiom_index = 0
+                    # 新成语
+                    idiom = random.choice(IDIOMS)
+                # 新食物
+                while True:
+                    food = (random.randint(0, (WIDTH // CELL_SIZE) - 1), random.randint(0, (HEIGHT // CELL_SIZE) - 1))
+                    if food not in snake:
+                        break
+            else:
+                snake.insert(0, new_head)
+                snake.pop()
+            # 撞到自己才会死
+            if snake[0] in snake[1:]:
+                running = False
 
         screen.fill(BLACK)
         draw_snake(snake)
